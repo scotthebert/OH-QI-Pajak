@@ -1,0 +1,147 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(car)
+```
+
+```{r}
+# Load data
+oh <- read_csv("C:/Users/hebers/OneDrive - University Of Massachusetts Medical School/Documents/UMass Projects/Pajak Project/WFCCOralHealthSurvey_DATA_2024-07-18_1356_SH.csv")
+oh
+```
+
+```{r}
+# Transform data
+# Already removed record ID 15, as it was blank
+oh2 <- oh %>% 
+  mutate(gendernew = NULL) %>% 
+  mutate(racenew = NULL) %>% 
+  mutate(dent_int_bin = NULL) %>% 
+  mutate(englishnew = NULL)
+oh2$dental_insurance <- factor(oh2$dental_insurance, labels = c("MassHealth", "Private", "Other", "Don't know", "No"))
+for(i in 1:nrow(oh2)){
+  oh2$gendernew[i] = ifelse(oh2$gender___1[i] == 1, "Female", ifelse(oh2$gender___2[i] == 1, "Male", ifelse(oh2$gender___3[i] == 1, "Trans female", ifelse(oh2$gender___4[i] == 1, "Trans male", ifelse(oh2$gender___5[i] == 1, "Non-binary", ifelse(oh2$gender___6[i] == 1, "Gender fluid", ifelse(oh2$gender___7[i] == 1, "Prefer not to answer", ifelse(oh2$gender___8[i] == 1, "Other", NA))))))))
+}
+for(i in 1:nrow(oh2)){
+  oh2$racenew[i] = ifelse(oh2$race___1[i] == 1 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "American Indian or Alaska Native", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 1 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "Asian", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 1 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "Black or African American", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 1 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "Native Hawaiian or Other Pacific Islander", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 1 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "White", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 1 & oh2$race___7[i] == 0, "Prefer not to answer", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 1, "Other", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, NA, "Multiracial"))))))))
+}
+oh2$dent_int_bin <- ifelse(oh2$dental_insurance == "No", 0, 1)
+oh2$englishnew <- ifelse(oh2$language == 4, 0, 1)
+oh2
+```
+
+# Models comparing yes/no dental insurance
+
+```{r}
+# Model outcome: Mouth pain in last 12 months
+m1 <- lm(mouth_pain ~ dent_int_bin + gendernew + racenew, data = oh2)
+summary(m1)
+```
+
+```{r}
+# Outcome: Oral health care received in last 12 months
+m2 <- glm(dental_visits ~ dent_int_bin + gendernew + racenew, data = oh2)
+summary(m2)
+```
+```{r}
+# Outcome: Oral health care received in last 12 months, Poisson distribution
+# Poisson distribution compared, due to outcome being count data
+m2.poisson <- glm(dental_visits ~ dent_int_bin + gendernew + racenew, family = "poisson", data = oh2)
+summary(m2.poisson)
+```
+
+```{r}
+# Outcome: Needing to access dental care but unable to
+m3 <- glm(access_dental_care ~ dent_int_bin + gendernew + racenew, family = "binomial", data = oh2)
+summary(m3)
+```
+
+```{r}
+# Outcome: Frequency of teeth brushing
+m4 <- lm(brushing ~ dent_int_bin + gendernew + racenew, data = oh2)
+summary(m4)
+```
+
+```{r}
+# Outcome: Duration of teeth brushing
+m5 <- lm(brush_time ~ dent_int_bin + gendernew + racenew, data = oh2)
+summary(m5)
+```
+
+```{r}
+# Outcome: Dental floss usage
+m6 <- lm(flossing ~ dent_int_bin + gendernew + racenew, data = oh2)
+summary(m6)
+```
+
+```{r}
+# Outcome: Need for dental hygiene supplies to bring home
+m7 <- glm(dental_supplies ~ dent_int_bin + gendernew + racenew, family = "binomial", data = oh2)
+summary(m7)
+```
+
+# Women, dental insurance, and race/ethnicity
+
+```{r}
+# Some overlap for race and ethnicity
+ohwomen <- oh2 %>% 
+  filter(gendernew == "Female")
+table(ohwomen$racenew, ohwomen$ethnicity)
+# It seems there are 3 black/African American women and 1 white woman who also
+#   identify as Hispanic/Latino
+```
+
+# Women, dental insurance, and English proficiency
+
+```{r}
+# Keep in mind that englishnew has 0 as no English, 1 as some or more English
+oh.hispanic.women <- oh2 %>% 
+  filter(gendernew == "Female" & ethnicity == 1)
+oh.black.women <- oh2 %>% 
+  filter(gendernew == "Female" & racenew == "Black or African American")
+```
+
+```{r}
+# Outcome: English proficiency
+# Hispanic/Latino women
+m8 <- glm(englishnew ~ dent_int_bin, family = "binomial", data = oh.hispanic.women)
+summary(m8)
+```
+
+```{r}
+# Outcome: English proficiency
+# Black or African American women
+m9 <- glm(englishnew ~ dent_int_bin, family = "binomial", data = oh.black.women)
+summary(m9)
+```
+
+# Women, Oral Health Night, and dental insurance
+
+```{r}
+# See notes
+# Could not find Oral Health Night variable
+```
+
+# Women who brush often and use floss and need of dentist
+
+```{r}
+# Filtering for: 
+#  - Women
+#  - Hispanic ethnicity
+#  - Brushing at least daily
+#  - Brushing for at least one minute
+#  - Flossing at occasionally
+
+# Only 9 people out of 84 fit in this group
+oh.hispanic.women.brush.floss <- oh2 %>% 
+  filter(gendernew == "Female" & ethnicity == 1 & brushing >= 5 & brush_time >= 4 & flossing >= 2)
+```
+
+```{r}
+m10 <- 
+```
+
