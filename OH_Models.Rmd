@@ -6,11 +6,49 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(car)
+library(MASS)
 ```
+
+# Notes
+
+- For dental insurance, should "Don't know" be counted as 0 or 1 in binary version?
+
+- brush_time option 1 being "Unsure" likely is giving issues
+
+- All models, unless they are filtered for them already, control for gender and race. Any others?
+
+- Some models are logistic regression models, due to a binary outcome variable
+
+- Some variables are considered numeric but could be counted as ordinal variables
+  - dental_visits
+    - Just has a 3+ category, so likely not worth the extra complexity
+  - mouth_pain
+    - Categories are not evenly spaced, so ordinal logistic regression may make sense
+    - However, if the category spacing makes sense, we could keep a linear regression model
+    - The data is right skewed, but that doesn't necessarily mean the category spacing is bad
+    - The ordinal logistic regression model has good (but not great) 95 percent CIs
+  - brushing
+    - Could work either way, probably better as ordinal
+  - brush_time
+    - Could work either way, as the gaps are relatively even (except for level 1)
+  - Overall, ordinal logistic regression, compared to linear regression, has a more complex interpretation
+
+- Race variable has a couple groups with 1 patient
+  - Recommend grouping into the "Other" group
+
+- For race/ethnicity among women (number 2 in the document), difficult to make groups
+  - Some women belong in multiple of the groups
+
+- Regarding the Oral Health Night section (number 3 in the document): 
+  - Can't find a variable for attending Oral Health Night
+  - referral_date seems like it might be correct, but that is not in the data dictionary
+
+- For the section about oral hygiene habits and dental care access:
+  - Another variable is needed to complete a t-test or regression model
 
 ```{r}
 # Load data
-oh <- read_csv("C:/Users/hebers/OneDrive - University Of Massachusetts Medical School/Documents/UMass Projects/Pajak Project/WFCCOralHealthSurvey_DATA_2024-07-18_1356_SH.csv")
+oh <- read_csv("C:/Users/hebers/OneDrive - University Of Massachusetts Medical School/Documents/UMass Projects/OH-QI-Pajak/WFCCOralHealthSurvey_DATA_2024-07-18_1356_SH.csv")
 oh
 ```
 
@@ -21,7 +59,8 @@ oh2 <- oh %>%
   mutate(gendernew = NULL) %>% 
   mutate(racenew = NULL) %>% 
   mutate(dent_int_bin = NULL) %>% 
-  mutate(englishnew = NULL)
+  mutate(englishnew = NULL) %>% 
+  mutate(mouth_pain_fac = NULL)
 oh2$dental_insurance <- factor(oh2$dental_insurance, labels = c("MassHealth", "Private", "Other", "Don't know", "No"))
 for(i in 1:nrow(oh2)){
   oh2$gendernew[i] = ifelse(oh2$gender___1[i] == 1, "Female", ifelse(oh2$gender___2[i] == 1, "Male", ifelse(oh2$gender___3[i] == 1, "Trans female", ifelse(oh2$gender___4[i] == 1, "Trans male", ifelse(oh2$gender___5[i] == 1, "Non-binary", ifelse(oh2$gender___6[i] == 1, "Gender fluid", ifelse(oh2$gender___7[i] == 1, "Prefer not to answer", ifelse(oh2$gender___8[i] == 1, "Other", NA))))))))
@@ -31,6 +70,7 @@ for(i in 1:nrow(oh2)){
 }
 oh2$dent_int_bin <- ifelse(oh2$dental_insurance == "No", 0, 1)
 oh2$englishnew <- ifelse(oh2$language == 4, 0, 1)
+oh2$mouth_pain_fac <- ordered(as.factor(oh2$mouth_pain))
 oh2
 ```
 
@@ -40,6 +80,17 @@ oh2
 # Model outcome: Mouth pain in last 12 months
 m1 <- lm(mouth_pain ~ dent_int_bin + gendernew + racenew, data = oh2)
 summary(m1)
+```
+
+```{r}
+# m1, but with mouth_pain ordered factor version
+m1fac <- polr(mouth_pain_fac ~ dent_int_bin + gendernew + racenew, data = oh2, Hess = TRUE)
+summary(m1fac)
+```
+
+```{r}
+# m1fac ORs and CIs
+exp(cbind(OR = coef(m1fac), confint(m1fac)))
 ```
 
 ```{r}
@@ -126,7 +177,7 @@ summary(m9)
 # Could not find Oral Health Night variable
 ```
 
-# Women who brush often and use floss and need of dentist
+# Women who brush often and use floss and access to care
 
 ```{r}
 # Filtering for: 
@@ -138,10 +189,15 @@ summary(m9)
 
 # Only 9 people out of 84 fit in this group
 oh.hispanic.women.brush.floss <- oh2 %>% 
-  filter(gendernew == "Female" & ethnicity == 1 & brushing >= 5 & brush_time >= 4 & flossing >= 2)
+  filter(gendernew == "Female" & 
+           ethnicity == 1 & 
+           brushing >= 5 & 
+           brush_time >= 4 & 
+           flossing >= 2)
 ```
 
 ```{r}
-m10 <- 
+# Breakdown of access_dental_care variable
+table(oh.hispanic.women.brush.floss$access_dental_care)
 ```
 
