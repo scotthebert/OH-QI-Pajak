@@ -11,9 +11,10 @@ library(MASS)
 
 # Notes
 
-- For dental insurance, should "Don't know" be counted as 0 or 1 in binary version?
+- For dental insurance binary variable, "Don't know" counted as 0
 
 - brush_time option 1 being "Unsure" likely is giving issues
+  - This is fine, generally
 
 - All models, unless they are filtered for them already, control for gender and race. Any others?
 
@@ -27,6 +28,7 @@ library(MASS)
     - However, if the category spacing makes sense, we could keep a linear regression model
     - The data is right skewed, but that doesn't necessarily mean the category spacing is bad
     - The ordinal logistic regression model has good (but not great) 95 percent CIs
+- mouth_pain -- MAKE BINARY
   - brushing
     - Could work either way, probably better as ordinal
   - brush_time
@@ -35,6 +37,7 @@ library(MASS)
 
 - Race variable has a couple groups with 1 patient
   - Recommend grouping into the "Other" group
+- Will group
 
 - For race/ethnicity among women (number 2 in the document), difficult to make groups
   - Some women belong in multiple of the groups
@@ -60,7 +63,8 @@ oh2 <- oh %>%
   mutate(racenew = NULL) %>% 
   mutate(dent_int_bin = NULL) %>% 
   mutate(englishnew = NULL) %>% 
-  mutate(mouth_pain_fac = NULL)
+  mutate(mouth_pain_fac = NULL) %>% 
+  mutate(mouth_pain_bin = NULL)
 oh2$dental_insurance <- factor(oh2$dental_insurance, labels = c("MassHealth", "Private", "Other", "Don't know", "No"))
 for(i in 1:nrow(oh2)){
   oh2$gendernew[i] = ifelse(oh2$gender___1[i] == 1, "Female", ifelse(oh2$gender___2[i] == 1, "Male", ifelse(oh2$gender___3[i] == 1, "Trans female", ifelse(oh2$gender___4[i] == 1, "Trans male", ifelse(oh2$gender___5[i] == 1, "Non-binary", ifelse(oh2$gender___6[i] == 1, "Gender fluid", ifelse(oh2$gender___7[i] == 1, "Prefer not to answer", ifelse(oh2$gender___8[i] == 1, "Other", NA))))))))
@@ -68,9 +72,10 @@ for(i in 1:nrow(oh2)){
 for(i in 1:nrow(oh2)){
   oh2$racenew[i] = ifelse(oh2$race___1[i] == 1 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "American Indian or Alaska Native", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 1 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "Asian", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 1 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "Black or African American", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 1 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "Native Hawaiian or Other Pacific Islander", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 1 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, "White", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 1 & oh2$race___7[i] == 0, "Prefer not to answer", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 1, "Other", ifelse(oh2$race___1[i] == 0 & oh2$race___2[i] == 0 & oh2$race___3[i] == 0 & oh2$race___4[i] == 0 & oh2$race___5[i] == 0 & oh2$race___6[i] == 0 & oh2$race___7[i] == 0, NA, "Multiracial"))))))))
 }
-oh2$dent_int_bin <- ifelse(oh2$dental_insurance == "No", 0, 1)
+oh2$dent_int_bin <- ifelse(oh2$dental_insurance == "No" | oh2$dental_insurance == "Don't know", 0, 1)
 oh2$englishnew <- ifelse(oh2$language == 4, 0, 1)
 oh2$mouth_pain_fac <- ordered(as.factor(oh2$mouth_pain))
+oh2$mouth_pain_bin <- ifelse(oh2$mouth_pain == 1, 0, 1)
 oh2
 ```
 
@@ -78,7 +83,7 @@ oh2
 
 ```{r}
 # Model outcome: Mouth pain in last 12 months
-m1 <- lm(mouth_pain ~ dent_int_bin + gendernew + racenew, data = oh2)
+m1 <- lm(mouth_pain_bin ~ dent_int_bin + gendernew + racenew, data = oh2)
 summary(m1)
 ```
 
@@ -199,5 +204,10 @@ oh.hispanic.women.brush.floss <- oh2 %>%
 ```{r}
 # Breakdown of access_dental_care variable
 table(oh.hispanic.women.brush.floss$access_dental_care)
+```
+
+```{r}
+# Hispanic women, seeing effect of brushing and flossing on access_dental_care
+
 ```
 
