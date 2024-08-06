@@ -68,7 +68,8 @@ oh2 <- oh %>%
   mutate(englishnew = NULL) %>% 
   mutate(mouth_pain_fac = NULL) %>% 
   mutate(mouth_pain_bin = NULL) %>% 
-  mutate(need_no_ins = NULL)
+  mutate(need_no_ins = NULL) %>% 
+  mutate(dental_visits_bin = NULL)
 oh2$dental_insurance <- factor(oh2$dental_insurance, labels = c("MassHealth", "Private", "Other", "Don't know", "No"))
 for(i in 1:nrow(oh2)){
   oh2$gendernew[i] = ifelse(oh2$gender___1[i] == 1, "Female", ifelse(oh2$gender___2[i] == 1, "Male", ifelse(oh2$gender___3[i] == 1, "Trans female", ifelse(oh2$gender___4[i] == 1, "Trans male", ifelse(oh2$gender___5[i] == 1, "Non-binary", ifelse(oh2$gender___6[i] == 1, "Gender fluid", ifelse(oh2$gender___7[i] == 1, "Prefer not to answer", ifelse(oh2$gender___8[i] == 1, "Other", NA))))))))
@@ -82,6 +83,7 @@ oh2$englishnew <- ifelse(oh2$language == 4, 0, 1)
 oh2$mouth_pain_fac <- ordered(as.factor(oh2$mouth_pain))
 oh2$mouth_pain_bin <- ifelse(oh2$mouth_pain == 1, 0, 1)
 oh2$need_no_ins <- ifelse(oh2$access_dental_care == 1 & oh2$dent_ins_bin == 0, 1, 0)
+oh2$dental_visits_bin <- ifelse(oh2$dental_visits == 0, 0, 1)
 oh2$gendernew <- as.factor(oh2$gendernew)
 oh2$racenew <- as.factor(oh2$racenew)
 oh2$racenew <- relevel(oh2$racenew, ref = "White")
@@ -109,8 +111,14 @@ summary(m1)
 
 ```{r}
 # Outcome: Oral health care received in last 12 months
-m2 <- glm(dental_visits ~ dent_ins_bin + gendernew + racenew, data = oh2)
+m2 <- lm(dental_visits ~ dent_ins_bin + gendernew + racenew, data = oh2)
 summary(m2)
+```
+
+```{r}
+# Outcome: Oral health care received in last 12 months, binary
+# m2.bin <- glm(dental_visits_bin ~ dent_ins_bin + gendernew + racenew, family = "binomial", data = oh2)
+# summary(m2.bin)
 ```
 
 ```{r}
@@ -148,6 +156,11 @@ summary(m6)
 # Outcome: Need for dental hygiene supplies to bring home
 m7 <- glm(dental_supplies ~ dent_ins_bin + gendernew + racenew, family = "binomial", data = oh2)
 summary(m7)
+```
+
+```{r}
+# Adjusted odds ratios, m7
+exp(coef(m7))
 ```
 
 # Women, dental insurance, and race/ethnicity
