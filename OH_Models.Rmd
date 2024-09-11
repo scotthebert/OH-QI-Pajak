@@ -116,6 +116,10 @@ summary(m2)
 ```
 
 ```{r}
+p.adjust(summary(m2)$coefficients[, 4], method = "bonferroni")
+```
+
+```{r}
 # Outcome: Oral health care received in last 12 months, binary
 # m2.bin <- glm(dental_visits_bin ~ dent_ins_bin + gendernew + racenew, family = "binomial", data = oh2)
 # summary(m2.bin)
@@ -161,6 +165,11 @@ summary(m7)
 ```{r}
 # Adjusted odds ratios, m7
 exp(coef(m7))
+```
+
+```{r}
+# Adjusted p-values, m7
+p.adjust(summary(m7)$coefficients[, 4], method = "BH")
 ```
 
 # Women, dental insurance, and race/ethnicity
@@ -248,5 +257,22 @@ table(oh.hispanic.women.brush.floss$access_dental_care)
 # Hispanic women, seeing effect of brushing and flossing on access_dental_care
 m.hispanic.women.need.brush.floss <- glm(access_dental_care ~ brushing + brush_time + flossing, family = "binomial", data = oh.hispanic.women)
 summary(m.hispanic.women.need.brush.floss)
+```
+
+```{r}
+# Testing for multicollinearity in all models
+vif(m1)
+vif(m2)
+vif(m3)
+vif(m4)
+vif(m5)
+vif(m6)
+vif(m7)
+vif(m8)
+vif(m9)
+vif(m.black.women.ohn)
+vif(m.hispanic.women.ohn)
+vif(m.hispanic.women.need.brush.floss)
+vif(m.women.need.ins.race.eth)
 ```
 
